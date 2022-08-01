@@ -17,7 +17,7 @@ class MovieTableViewCell: UITableViewCell {
             imdbLabel.text = "\(data?.voteAverage ?? 0.0)"
             ratingInStarsLabel.text = data?.ratingText
             
-            if let urlString = data?.posterURL {
+            if let urlString = data?.posterURLString {
                 movieImageView.loadImageUsingCache(withUrl: urlString)
             }
             
@@ -36,7 +36,6 @@ class MovieTableViewCell: UITableViewCell {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFill
-        imageView.backgroundColor = .red  // !!!!
         
         return imageView
     }()
@@ -110,6 +109,9 @@ class MovieTableViewCell: UITableViewCell {
         
         return stackView
     }()
+    
+    
+    
     
     
     

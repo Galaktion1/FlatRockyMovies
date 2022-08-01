@@ -10,13 +10,33 @@ import UIKit
 class MainPageViewController: UIViewController {
     
     private let viewModel = MainScreenViewModel()
-
+    
+    var onlyFavMovies = [Movie]() {
+        didSet {
+            print("onlyFavArray sheicvala")
+            
+            tableView.reloadData()
+        }
+    }
+    
+    var favMoviesIndecies = [Int]() {
+        didSet {
+            if favMoviesIndecies.count != oldValue.count {
+                for index in 0 ..< viewModel.moviesData.count {
+                    if favMoviesIndecies.contains(viewModel.moviesData[index].id!) {
+                        viewModel.moviesData[index].isFavourite = true
+                    }
+                }
+                tableView.reloadData()
+            }
+        }
+    }
     
     private let genresStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .horizontal
-        stackView.distribution = .fillProportionally
+        stackView.distribution = .equalSpacing
         stackView.backgroundColor = UIColor(named: "color_backgroundColor")
         
         return stackView
@@ -44,7 +64,8 @@ class MainPageViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(named: "color_backgroundColor")
         
-        viewModel.loadMovie(endPoint: .nowPlaying)
+        nowPlayingButtonAction()
+        nowPlayingButton.setTitleColor(.systemYellow, for: .normal)
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -57,12 +78,24 @@ class MainPageViewController: UIViewController {
             self.tableView.reloadData()
         }
         
+        createGenresSectionButtonsAndAddInStackView()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        favMoviesIndecies = UserDefaults.standard.array(forKey: "favMovies") as? [Int] ?? []
+        
+        viewModel.updateFavInfo = { info in
+            self.onlyFavMovies = info
+        }
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         configureUIElements()
     }
+    
+    
     
     var nowPlayingButton = UIButton()
     var upCommingButton = UIButton()
@@ -95,58 +128,47 @@ class MainPageViewController: UIViewController {
     @objc func nowPlayingButtonAction() {
         viewModel.loadMovie(endPoint: .nowPlaying)
         
-        viewModel.moveActiveIndicatorView(mainButton: nowPlayingButton,
-                                          button2: upCommingButton,
-                                          button3: popularButton,
-                                          button4: topRatedButton,
+        
+        viewModel.moveActiveIndicatorView(mainButton: nowPlayingButton, otherButtons: [upCommingButton, popularButton, topRatedButton],
                                           indicatorView: activeIndicatorView)
     }
+    
     
     @objc func upCommingButtonAction() {
         viewModel.loadMovie(endPoint: .upcoming)
         
-        viewModel.moveActiveIndicatorView(mainButton: upCommingButton,
-                                          button2: nowPlayingButton,
-                                          button3: popularButton,
-                                          button4: topRatedButton,
+        viewModel.moveActiveIndicatorView(mainButton: upCommingButton, otherButtons: [nowPlayingButton, popularButton, topRatedButton],
                                           indicatorView: activeIndicatorView)
     }
     
     @objc func popularButtonAction() {
         viewModel.loadMovie(endPoint: .popular)
         
-        viewModel.moveActiveIndicatorView(mainButton: popularButton,
-                                          button2: upCommingButton,
-                                          button3: nowPlayingButton,
-                                          button4: topRatedButton,
+        viewModel.moveActiveIndicatorView(mainButton: popularButton, otherButtons: [nowPlayingButton, upCommingButton, topRatedButton],
                                           indicatorView: activeIndicatorView)
     }
     
     @objc func topRatedButtonAction() {
         viewModel.loadMovie(endPoint: .topRated)
         
-        viewModel.moveActiveIndicatorView(mainButton: topRatedButton,
-                                          button2: upCommingButton,
-                                          button3: popularButton,
-                                          button4: nowPlayingButton,
+        viewModel.moveActiveIndicatorView(mainButton: topRatedButton, otherButtons: [nowPlayingButton, popularButton, upCommingButton],
                                           indicatorView: activeIndicatorView)
     }
     
     
     private func configureUIElements() {
-        createGenresSectionButtonsAndAddInStackView()
         
         view.addSubview(activeIndicatorView)
         view.addSubview(tableView)
         
         NSLayoutConstraint.activate([
-            genresStackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
+            genresStackView.topAnchor.constraint(equalTo: view.topAnchor, constant: view.bounds.height / 10),
             genresStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 5),
             genresStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -5),
             genresStackView.heightAnchor.constraint(equalToConstant: 30),
             
             activeIndicatorView.topAnchor.constraint(equalTo: genresStackView.bottomAnchor, constant: 2),
-            activeIndicatorView.leadingAnchor.constraint(equalTo: genresStackView.leadingAnchor, constant: 5),
+            activeIndicatorView.leadingAnchor.constraint(equalTo: genresStackView.leadingAnchor, constant: 0),
             activeIndicatorView.heightAnchor.constraint(equalToConstant: 2),
             activeIndicatorView.widthAnchor.constraint(equalToConstant: 100),
             
@@ -212,7 +234,7 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
                 return viewModel.numberOfRowsInSection()
             }
             else {
-                return 0 // sortByGenre.count - favCount
+                return onlyFavMovies.count
             }
         
     }
@@ -222,29 +244,21 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "MovieTableViewCell") as! MovieTableViewCell
         cell.backgroundColor = UIColor(named: "color_backgroundColor")
+        cell.selectionStyle = .none
         
-        cell.data = viewModel.cellForRowAt(indexPath: indexPath)
         
-        return cell
-        
-//        let favFilms = getFavoriteFilms()
-//        let unfavFilms = getUnfavoriteFilms()
-//
-//        guard let cell = MoviesTableViewCell()
-//
-//        cell.delegate = self
-//
-//        if indexPath.section == 0 {
-//            cell.setUpUI(model: favFilms[indexPath.row])
-//
-//            return cell
-//        }
-//
-//        else {
-//            cell.setUpUI(model: unfavFilms[indexPath.row])
-//
-//            return cell
-//        }
+
+        if indexPath.section == 0 {
+            cell.data = viewModel.cellForRowAtForAllMovies(indexPath: indexPath)
+
+            return cell
+        }
+
+        else {
+            cell.data = viewModel.cellForRowAtForFavMovies(indexPath: indexPath)
+
+            return cell
+        }
         
     }
     
@@ -257,32 +271,37 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
 //
 //    }
     
-//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-//
-//        let sb = UIStoryboard(name: "MovieDetails", bundle: Bundle.main)
-//        guard let vc = sb.instantiateViewController(withIdentifier: "MovieDetailsViewController") as? MovieDetailsViewController else { return }
-//
-//        vc.delegate = self
-//
-//        _ = vc.view
-//
-//
-//        if indexPath.section == 0 {
-//            confUIForDetails(vc: vc, model: getFavoriteFilms()[indexPath.row])
-//        }
-//        else {
-//            confUIForDetails(vc: vc, model: getUnfavoriteFilms()[indexPath.row])
-//        }
-//
-//
-//
-//        navigationController?.pushViewController(vc, animated: true)
-//
-//    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+
+
+        let vc = MovieDetailsViewController()
+    
+        vc.delegate = self
+        
+        if indexPath.section == 0 {
+            vc.movieData = viewModel.cellForRowAtForAllMovies(indexPath: indexPath)
+        }
+        else {
+            vc.movieData = viewModel.cellForRowAtForFavMovies(indexPath: indexPath)
+            vc.favButton.isSelected = true
+        }
+        
+        navigationController?.pushViewController(vc, animated: true)
+
+    }
 }
 
 
-
+extension MainPageViewController: MovieDetailsViewControllerDelegate {
+    func changeIsFavProperty(isFav: Bool, id: Int) {
+        for index in 0 ..< viewModel.moviesData.count {
+            if viewModel.moviesData[index].id == id {
+                viewModel.moviesData[index].isFavourite = isFav
+                print(viewModel.moviesData[index].isFavourite)
+            }
+        }
+    }
+}
 
 
 
