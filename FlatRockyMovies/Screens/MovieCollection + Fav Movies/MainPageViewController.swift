@@ -11,6 +11,8 @@ class MainPageViewController: UIViewController {
     
     private let viewModel = MainScreenViewModel()
     
+    private var currentPage: MovieListEndpoint = .nowPlaying
+    
     var onlyFavMovies = [Movie]() {
         didSet {
             print("onlyFavArray sheicvala")
@@ -88,6 +90,9 @@ class MainPageViewController: UIViewController {
         viewModel.updateFavInfo = { info in
             self.onlyFavMovies = info
         }
+        
+        viewModel.loadMovie(endPoint: currentPage)
+        
     }
     
     override func viewDidLayoutSubviews() {
@@ -131,6 +136,7 @@ class MainPageViewController: UIViewController {
         
         viewModel.moveActiveIndicatorView(mainButton: nowPlayingButton, otherButtons: [upCommingButton, popularButton, topRatedButton],
                                           indicatorView: activeIndicatorView)
+        currentPage = .nowPlaying
     }
     
     
@@ -139,13 +145,16 @@ class MainPageViewController: UIViewController {
         
         viewModel.moveActiveIndicatorView(mainButton: upCommingButton, otherButtons: [nowPlayingButton, popularButton, topRatedButton],
                                           indicatorView: activeIndicatorView)
+        currentPage = .upcoming
     }
+    
     
     @objc func popularButtonAction() {
         viewModel.loadMovie(endPoint: .popular)
         
         viewModel.moveActiveIndicatorView(mainButton: popularButton, otherButtons: [nowPlayingButton, upCommingButton, topRatedButton],
                                           indicatorView: activeIndicatorView)
+        currentPage = .popular
     }
     
     @objc func topRatedButtonAction() {
@@ -153,6 +162,7 @@ class MainPageViewController: UIViewController {
         
         viewModel.moveActiveIndicatorView(mainButton: topRatedButton, otherButtons: [nowPlayingButton, popularButton, upCommingButton],
                                           indicatorView: activeIndicatorView)
+        currentPage = .topRated
     }
     
     
@@ -203,7 +213,7 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
         let label = UILabel()
         label.frame = CGRect.init(x: 5, y: 5, width: headerView.frame.width-10, height: headerView.frame.height-10)
         if section == 0 {
-            label.text = "Unfavorite Films"
+            label.text = "All Films"
         }
         else {
             label.text = "Favourite Films"
@@ -279,11 +289,13 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
         vc.delegate = self
         
         if indexPath.section == 0 {
+            vc.isFavourite = false
             vc.movieData = viewModel.cellForRowAtForAllMovies(indexPath: indexPath)
+            
         }
         else {
+            vc.isFavourite = true
             vc.movieData = viewModel.cellForRowAtForFavMovies(indexPath: indexPath)
-            vc.favButton.isSelected = true
         }
         
         navigationController?.pushViewController(vc, animated: true)

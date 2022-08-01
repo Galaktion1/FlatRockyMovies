@@ -17,6 +17,14 @@ class MovieDetailsViewController: UIViewController {
     
     var delegate: MovieDetailsViewControllerDelegate?
     
+    var isFavourite: Bool! {
+        didSet {
+            if isFavourite {
+                favButton.setImage(UIImage(systemName: "heart.fill"), for: .normal)
+            } else { favButton.setImage(UIImage(systemName: "heart"), for: .normal) }
+        }
+    }
+    
     var movieData: Movie? {
         didSet {
             titleLabel.text = movieData?.title
@@ -31,11 +39,10 @@ class MovieDetailsViewController: UIViewController {
                 mainImageView.loadImageUsingCache(withUrl: movieData.backdropURLString)
             }
             
-            if let isFav = movieData?.isFavourite {
-                if isFav {
-                    favButton.isSelected = true
-                } else { favButton.isSelected = false }
-            }
+            if isFavourite {
+                favButton.setImage(UIImage(systemName: "heart.fill"), for: .normal)
+            } else { favButton.setImage(UIImage(systemName: "heart"), for: .normal) }
+            
              
         }
     }
@@ -87,7 +94,6 @@ class MovieDetailsViewController: UIViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.tintColor = .systemRed
         button.backgroundColor = .clear
-        button.isSelected ? button.setImage(UIImage(systemName: "heart.fill"), for: .selected) : button.setImage(UIImage(systemName: "heart"), for: .normal)
         
         button.imageView?.layer.transform = CATransform3DMakeScale(1.5, 1.5, 1.5)
         
@@ -98,11 +104,11 @@ class MovieDetailsViewController: UIViewController {
         
         var favMovies  = UserDefaults.standard.array(forKey: "favMovies") as? [Int] ?? []
         
-        if sender.isSelected {
+        if isFavourite {
             
-            movieData?.isFavourite = true
+            isFavourite.toggle()
             if let id = movieData?.id {
-                delegate?.changeIsFavProperty(isFav: !sender.isSelected, id: id)
+                delegate?.changeIsFavProperty(isFav: isFavourite, id: id)
                 if favMovies.contains(id) {
                     favMovies = favMovies.filter { $0 != id }
                     UserDefaults.standard.set(favMovies, forKey: "favMovies")
@@ -113,9 +119,9 @@ class MovieDetailsViewController: UIViewController {
         }
         else {
             sender.setImage(UIImage(systemName: "heart.fill"), for: .selected)
-            
+            isFavourite.toggle()
             if let id = movieData?.id {
-                delegate?.changeIsFavProperty(isFav: !sender.isSelected, id: id)
+                delegate?.changeIsFavProperty(isFav: isFavourite, id: id)
                 if !favMovies.contains(id) {
                     favMovies.append(id)
                     UserDefaults.standard.set(favMovies, forKey: "favMovies")
@@ -124,7 +130,6 @@ class MovieDetailsViewController: UIViewController {
             }
         }
         
-        sender.isSelected.toggle()
     }
     
     private let imdbLabel: UILabel = {
@@ -318,9 +323,6 @@ class MovieDetailsViewController: UIViewController {
             miniDetailsAboutMovieStackView.leadingAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.leadingAnchor, constant: 10),
             miniDetailsAboutMovieStackView.trailingAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.trailingAnchor, constant: -10),
             miniDetailsAboutMovieStackView.bottomAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.bottomAnchor, constant: -20),
-            
-            
-            
             
             
         ])
