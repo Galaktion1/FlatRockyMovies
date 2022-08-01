@@ -14,14 +14,14 @@ protocol MovieDetailsViewControllerDelegate {
 class MovieDetailsViewController: UIViewController {
     
     private let viewModel = MovieDetailsViewModel()
+    var moviesWithSameGenres = [Movie]()
+    
     
     var delegate: MovieDetailsViewControllerDelegate?
     
     var isFavourite: Bool! {
         didSet {
-            if isFavourite {
-                favButton.setImage(UIImage(systemName: "heart.fill"), for: .normal)
-            } else { favButton.setImage(UIImage(systemName: "heart"), for: .normal) }
+            checkIfFav()
         }
     }
     
@@ -30,21 +30,18 @@ class MovieDetailsViewController: UIViewController {
             titleLabel.text = movieData?.title
             imdbLabel.text = "\(movieData?.voteAverage ?? 0.0)"
             ratingInStarsLabel.text = movieData?.ratingText
-            genreLabel.text = "\(movieData?.voteCount ?? 0)"
+            voteCountLabel.text = "\(movieData?.voteCount ?? 0)"
             originalLanguageLabel.text = movieData?.originalLanguage?.uppercased()
             
             releaseYearLabel.text = movieData?.releaseDate
             overviewTextView.text = movieData?.overview
             if let movieData = movieData {
-                mainImageView.loadImageUsingCache(withUrl: movieData.backdropURLString)
-            }
+                mainImageView.loadImageUsingCache(withUrl: movieData.backdropURLString) }
             
-            if isFavourite {
-                favButton.setImage(UIImage(systemName: "heart.fill"), for: .normal)
-            } else { favButton.setImage(UIImage(systemName: "heart"), for: .normal) }
+            checkIfFav()
             
-             
         }
+        
     }
     
     private let mainImageView: UIImageView = {
@@ -93,44 +90,13 @@ class MovieDetailsViewController: UIViewController {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
         button.tintColor = .systemRed
-        button.backgroundColor = .clear
+        button.isUserInteractionEnabled = true
         
         button.imageView?.layer.transform = CATransform3DMakeScale(1.5, 1.5, 1.5)
         
         return button
     }()
     
-    @objc func makeMovieFavourite(_ sender: UIButton) {
-        
-        var favMovies  = UserDefaults.standard.array(forKey: "favMovies") as? [Int] ?? []
-        
-        if isFavourite {
-            
-            isFavourite.toggle()
-            if let id = movieData?.id {
-                delegate?.changeIsFavProperty(isFav: isFavourite, id: id)
-                if favMovies.contains(id) {
-                    favMovies = favMovies.filter { $0 != id }
-                    UserDefaults.standard.set(favMovies, forKey: "favMovies")
-                    print(favMovies)
-                }
-            }
-        
-        }
-        else {
-            sender.setImage(UIImage(systemName: "heart.fill"), for: .selected)
-            isFavourite.toggle()
-            if let id = movieData?.id {
-                delegate?.changeIsFavProperty(isFav: isFavourite, id: id)
-                if !favMovies.contains(id) {
-                    favMovies.append(id)
-                    UserDefaults.standard.set(favMovies, forKey: "favMovies")
-                    print(favMovies)
-                }
-            }
-        }
-        
-    }
     
     private let imdbLabel: UILabel = {
         let label = UILabel()
@@ -179,14 +145,16 @@ class MovieDetailsViewController: UIViewController {
         return view
     }()
     
-    private var genreLabel:  UILabel = {
+    private var voteCountLabel:  UILabel = {
         let label = UILabel()
+        label.textAlignment = .right
         
         return label
     }()
     
     private var releaseYearLabel:  UILabel = {
         let label = UILabel()
+        label.textAlignment = .right
         
         return label
     }()
@@ -211,36 +179,123 @@ class MovieDetailsViewController: UIViewController {
     }()
     
     
+    private let sameSectionMoviesCollectionView: UICollectionView = {
+        
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        
+        let collectionView = UICollectionView(frame: CGRect(x: 0, y: 0, width: 180, height: 180), collectionViewLayout: layout)
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.backgroundColor = .clear
+        
+        return collectionView
+    }()
+    
+    private let scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.isDirectionalLockEnabled = true
+        
+        return scrollView
+        
+    }()
     
     
+    private let backgroundView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        
+        return view
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(named: "color_backgroundColor")
+        
+//        scrollView.delegate = self
         confMiniDetailsAboutMovieStackView()
         favButton.addTarget(self, action: #selector(makeMovieFavourite(_:)), for: .touchUpInside)
         // Do any additional setup after loading the view.
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
         
-        if let isFav = movieData?.isFavourite {
-            if isFav {
-                favButton.isSelected = true
-            } else { favButton.isSelected = false }
-        }
+        
+        sameSectionMoviesCollectionView.register(MoviesCollectionViewCell.self, forCellWithReuseIdentifier: MoviesCollectionViewCell.identifier)
+        sameSectionMoviesCollectionView.delegate = self
+        sameSectionMoviesCollectionView.dataSource = self
+        
     }
     
-    override func viewWillLayoutSubviews() {
-        super.viewWillLayoutSubviews()
+//    override func viewWillAppear(_ animated: Bool) {
+//        super.viewWillAppear(animated)
+//
+//        if let isFav = movieData?.isFavourite {
+//            if isFav {
+//                favButton.isSelected = true
+//            } else { favButton.isSelected = false }
+//        }
+//    }
+    
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
         configureUIElementsConstraints()
+    }
+    
+   
+    
+    
+    
+    @objc func makeMovieFavourite(_ sender: UIButton) {
+        
+        var favMovies  = UserDefaults.standard.array(forKey: "favMovies") as? [Int] ?? []
+        
+        if isFavourite {
+            
+            isFavourite.toggle()
+            if let id = movieData?.id {
+                delegate?.changeIsFavProperty(isFav: isFavourite, id: id)
+                if favMovies.contains(id) {
+                    favMovies = favMovies.filter { $0 != id }
+                    UserDefaults.standard.set(favMovies, forKey: "favMovies")
+                    print(favMovies)
+                }
+            }
+        
+        }
+        else {
+            UIView.animate(withDuration: 0.3, delay: 0.1, options: .curveLinear, animations: {
+                self.favButton.transform = CGAffineTransform(scaleX: 0.1, y: 0.1)
+            }) { (success) in
+                
+                self.favButton.setImage(UIImage(systemName: "heart.fill"), for: .normal)
+                   
+                
+                UIView.animate(withDuration: 0.5, delay: 0.1, options: .curveLinear, animations: {
+                    self.favButton.transform = .identity
+                }, completion: nil)
+            }
+            isFavourite.toggle()
+            if let id = movieData?.id {
+                delegate?.changeIsFavProperty(isFav: isFavourite, id: id)
+                if !favMovies.contains(id) {
+                    favMovies.append(id)
+                    UserDefaults.standard.set(favMovies, forKey: "favMovies")
+                    print(favMovies)
+                }
+            }
+        }
+        
+    }
+    
+    private func checkIfFav() {
+        isFavourite ? favButton.setImage(UIImage(systemName: "heart.fill"), for: .normal) : favButton.setImage(UIImage(systemName: "heart"), for: .normal)
     }
     
     private func confMiniDetailsAboutMovieStackView() {
         let genreStackView = viewModel.createDetailsHorizontalStackView(staticLabelText: "Vote Count:")
-        viewModel.costumizeLabel(label: genreLabel)
-        genreStackView.addArrangedSubview(genreLabel)
+        viewModel.costumizeLabel(label: voteCountLabel)
+        genreStackView.addArrangedSubview(voteCountLabel)
         
         let releaseYearStackView = viewModel.createDetailsHorizontalStackView(staticLabelText: "Release Date:")
         viewModel.costumizeLabel(label: releaseYearLabel)
@@ -256,7 +311,7 @@ class MovieDetailsViewController: UIViewController {
         
         miniDetailsAboutMovieBackgroundView.addSubview(miniDetailsAboutMovieStackView)
         
-        view.addSubview(miniDetailsAboutMovieBackgroundView)
+        scrollView.addSubview(miniDetailsAboutMovieBackgroundView)
         
         
     }
@@ -267,9 +322,37 @@ class MovieDetailsViewController: UIViewController {
         overviewBackgroundView.addSubview(imdbAndStarsRatingStackView)
     }
     
+
+    
     private func configureUIElementsConstraints() {
-        view.addSubview(mainImageView)
-        view.addSubview(overviewBackgroundView)
+        view.addSubview(scrollView)
+        scrollView.contentSize = CGSize(width: 450, height: 1000)
+        
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+        
+        scrollView.addSubview(backgroundView)
+
+        NSLayoutConstraint.activate([
+           backgroundView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+           backgroundView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+           backgroundView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+           backgroundView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+           backgroundView.widthAnchor.constraint(equalToConstant: scrollView.bounds.width)
+        ])
+        
+        let heightConstraint = backgroundView.heightAnchor.constraint(equalTo: scrollView.heightAnchor)
+        heightConstraint.priority = UILayoutPriority(rawValue: 250)
+        heightConstraint.isActive = true
+        
+        backgroundView.addSubview(mainImageView)
+        backgroundView.addSubview(overviewBackgroundView)
+        backgroundView.addSubview(sameSectionMoviesCollectionView)
+        
         confImdbAndStarsRatingStackView()
         overviewBackgroundView.addSubview(overviewTextView)
         overviewBackgroundView.addSubview(titleLabel)
@@ -278,15 +361,14 @@ class MovieDetailsViewController: UIViewController {
         
         
         NSLayoutConstraint.activate([
-            mainImageView.heightAnchor.constraint(equalToConstant: view.bounds.height / 3.5),
-            mainImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 0),
-            mainImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0),
-            mainImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: 0),
+            mainImageView.heightAnchor.constraint(equalToConstant: view.bounds.height / 4),
+            mainImageView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 0),
+            mainImageView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0),
+            mainImageView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0),
             
             overviewBackgroundView.topAnchor.constraint(equalTo: mainImageView.bottomAnchor, constant: -40),
-            overviewBackgroundView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            overviewBackgroundView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            
+            overviewBackgroundView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
+            overviewBackgroundView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             overviewBackgroundView.heightAnchor.constraint(equalToConstant: 347),
             
             
@@ -297,7 +379,6 @@ class MovieDetailsViewController: UIViewController {
             
             titleLabel.topAnchor.constraint(equalTo: overviewBackgroundView.topAnchor, constant: 4),
             titleLabel.leadingAnchor.constraint(equalTo: overviewBackgroundView.leadingAnchor, constant: 8),
-//            titleLabel.heightAnchor.constraint(equalToConstant: 25),
             
             favButton.topAnchor.constraint(equalTo: overviewBackgroundView.topAnchor, constant: 4),
             favButton.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 10),
@@ -315,8 +396,8 @@ class MovieDetailsViewController: UIViewController {
             overviewTextView.bottomAnchor.constraint(equalTo: overviewBackgroundView.bottomAnchor, constant: -50),
             
             miniDetailsAboutMovieBackgroundView.topAnchor.constraint(equalTo: overviewBackgroundView.bottomAnchor, constant: 40),
-            miniDetailsAboutMovieBackgroundView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            miniDetailsAboutMovieBackgroundView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            miniDetailsAboutMovieBackgroundView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
+            miniDetailsAboutMovieBackgroundView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
             miniDetailsAboutMovieBackgroundView.heightAnchor.constraint(equalToConstant: 140),
             
             miniDetailsAboutMovieStackView.topAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.topAnchor, constant: 20),
@@ -324,12 +405,51 @@ class MovieDetailsViewController: UIViewController {
             miniDetailsAboutMovieStackView.trailingAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.trailingAnchor, constant: -10),
             miniDetailsAboutMovieStackView.bottomAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.bottomAnchor, constant: -20),
             
-            
+            sameSectionMoviesCollectionView.topAnchor.constraint(equalTo: miniDetailsAboutMovieBackgroundView.bottomAnchor, constant: 30),
+            sameSectionMoviesCollectionView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
+            sameSectionMoviesCollectionView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -1),
+            sameSectionMoviesCollectionView.heightAnchor.constraint(equalToConstant: 192)
         ])
     }
     
 }
 
+
+
+extension MovieDetailsViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        moviesWithSameGenres.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MoviesCollectionViewCell.identifier, for: indexPath) as! MoviesCollectionViewCell
+        
+        cell.configureUIElements(imageURLString: moviesWithSameGenres[indexPath.row].posterURLString)
+        
+        return cell
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        CGSize(width: 120, height: 155)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        movieData = moviesWithSameGenres[indexPath.row]
+    }
+}
+
+
+//extension MovieDetailsViewController: UIScrollViewDelegate {
+//
+//    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+//        if scrollView.contentOffset.x != 0 {
+//            scrollView.contentOffset.x = 0
+//        }
+//    }
+//
+//}
 
 
 #if canImport(swiftUI) && DEBUG
@@ -341,6 +461,8 @@ struct PreviewMovieDetailsViewController_Previews: PreviewProvider {
         }.previewDevice("iPhone 12").previewInterfaceOrientation(.portrait)
     }
 }
+
+
 
 struct MovieDetailsViewControllerPreview<ViewController: UIViewController>: UIViewControllerRepresentable {
     let viewControllerBuilder: () -> UIViewController

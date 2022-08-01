@@ -287,9 +287,12 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
         let vc = MovieDetailsViewController()
     
         vc.delegate = self
+        vc.moviesWithSameGenres = viewModel.moviesData
         
         if indexPath.section == 0 {
+            
             vc.isFavourite = false
+            
             vc.movieData = viewModel.cellForRowAtForAllMovies(indexPath: indexPath)
             
         }
@@ -309,7 +312,6 @@ extension MainPageViewController: MovieDetailsViewControllerDelegate {
         for index in 0 ..< viewModel.moviesData.count {
             if viewModel.moviesData[index].id == id {
                 viewModel.moviesData[index].isFavourite = isFav
-                print(viewModel.moviesData[index].isFavourite)
             }
         }
     }
