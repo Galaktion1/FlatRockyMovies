@@ -39,9 +39,7 @@ class MovieDetailsViewController: UIViewController {
                 mainImageView.loadImageUsingCache(withUrl: movieData.backdropURLString) }
             
             checkIfFav()
-            
         }
-        
     }
     
     private let mainImageView: UIImageView = {
@@ -52,6 +50,7 @@ class MovieDetailsViewController: UIViewController {
         return img
     }()
     
+    
     private let overviewBackgroundView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -59,6 +58,7 @@ class MovieDetailsViewController: UIViewController {
         
         return view
     }()
+    
     
     private let playButton: UIButton = {
         let button = UIButton()
@@ -71,6 +71,7 @@ class MovieDetailsViewController: UIViewController {
         
         return button
     }()
+    
     
     private let titleLabel: UILabel = {
         let label = UILabel()
@@ -85,6 +86,7 @@ class MovieDetailsViewController: UIViewController {
         
         return label
     }()
+    
     
     let favButton: UIButton = {
         let button = UIButton()
@@ -145,12 +147,14 @@ class MovieDetailsViewController: UIViewController {
         return view
     }()
     
+    
     private var voteCountLabel:  UILabel = {
         let label = UILabel()
         label.textAlignment = .right
         
         return label
     }()
+    
     
     private var releaseYearLabel:  UILabel = {
         let label = UILabel()
@@ -159,13 +163,13 @@ class MovieDetailsViewController: UIViewController {
         return label
     }()
     
+    
     private var originalLanguageLabel:  UILabel = {
         let label = UILabel()
         label.textAlignment = .right
         
         return label
     }()
-    
     
     
     private let miniDetailsAboutMovieStackView: UIStackView = {
@@ -191,6 +195,7 @@ class MovieDetailsViewController: UIViewController {
         return collectionView
     }()
     
+    
     private let scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -209,31 +214,20 @@ class MovieDetailsViewController: UIViewController {
         return view
     }()
     
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(named: "color_backgroundColor")
         
-//        scrollView.delegate = self
         confMiniDetailsAboutMovieStackView()
         favButton.addTarget(self, action: #selector(makeMovieFavourite(_:)), for: .touchUpInside)
-        // Do any additional setup after loading the view.
-        
+      
         
         sameSectionMoviesCollectionView.register(MoviesCollectionViewCell.self, forCellWithReuseIdentifier: MoviesCollectionViewCell.identifier)
         sameSectionMoviesCollectionView.delegate = self
         sameSectionMoviesCollectionView.dataSource = self
-        
     }
-    
-//    override func viewWillAppear(_ animated: Bool) {
-//        super.viewWillAppear(animated)
-//
-//        if let isFav = movieData?.isFavourite {
-//            if isFav {
-//                favButton.isSelected = true
-//            } else { favButton.isSelected = false }
-//        }
-//    }
     
     
     override func viewDidLayoutSubviews() {
@@ -243,7 +237,6 @@ class MovieDetailsViewController: UIViewController {
     }
     
    
-    
     
     
     @objc func makeMovieFavourite(_ sender: UIButton) {
@@ -261,7 +254,6 @@ class MovieDetailsViewController: UIViewController {
                     print(favMovies)
                 }
             }
-        
         }
         else {
             UIView.animate(withDuration: 0.3, delay: 0.1, options: .curveLinear, animations: {
@@ -293,6 +285,7 @@ class MovieDetailsViewController: UIViewController {
     }
     
     private func confMiniDetailsAboutMovieStackView() {
+        
         let genreStackView = viewModel.createDetailsHorizontalStackView(staticLabelText: "Vote Count:")
         viewModel.costumizeLabel(label: voteCountLabel)
         genreStackView.addArrangedSubview(voteCountLabel)
@@ -312,8 +305,6 @@ class MovieDetailsViewController: UIViewController {
         miniDetailsAboutMovieBackgroundView.addSubview(miniDetailsAboutMovieStackView)
         
         scrollView.addSubview(miniDetailsAboutMovieBackgroundView)
-        
-        
     }
     
     private func confImdbAndStarsRatingStackView() {
@@ -323,8 +314,7 @@ class MovieDetailsViewController: UIViewController {
     }
     
 
-    
-    private func configureUIElementsConstraints() {
+    private func confScrollView() {
         view.addSubview(scrollView)
         scrollView.contentSize = CGSize(width: 450, height: 1000)
         
@@ -334,6 +324,9 @@ class MovieDetailsViewController: UIViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+    }
+    
+    private func confBackgroundView() {
         
         scrollView.addSubview(backgroundView)
 
@@ -349,6 +342,10 @@ class MovieDetailsViewController: UIViewController {
         heightConstraint.priority = UILayoutPriority(rawValue: 250)
         heightConstraint.isActive = true
         
+    }
+    
+    
+    private func addSubviewInBackgroundAndInOverview() {
         backgroundView.addSubview(mainImageView)
         backgroundView.addSubview(overviewBackgroundView)
         backgroundView.addSubview(sameSectionMoviesCollectionView)
@@ -358,7 +355,15 @@ class MovieDetailsViewController: UIViewController {
         overviewBackgroundView.addSubview(titleLabel)
         overviewBackgroundView.addSubview(favButton)
         overviewBackgroundView.addSubview(playButton)
+    }
+    
+    private func configureUIElementsConstraints() {
         
+        confScrollView()
+        
+        confBackgroundView()
+        
+        addSubviewInBackgroundAndInOverview()
         
         NSLayoutConstraint.activate([
             mainImageView.heightAnchor.constraint(equalToConstant: view.bounds.height / 4),

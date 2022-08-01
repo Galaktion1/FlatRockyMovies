@@ -15,8 +15,6 @@ class MainPageViewController: UIViewController {
     
     var onlyFavMovies = [Movie]() {
         didSet {
-            print("onlyFavArray sheicvala")
-            
             tableView.reloadData()
         }
     }
@@ -91,7 +89,7 @@ class MainPageViewController: UIViewController {
             self.onlyFavMovies = info
         }
         
-        viewModel.loadMovie(endPoint: currentPage)
+        viewModel.loadMovie(endPoint: currentPage)  // every time when user pop to root viewcontroller, I'm reloading page if he liked/unliked movie
         
     }
     
@@ -239,14 +237,12 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
             
-//            let favCount = getFavoriteFilms().count
             if section == 0 {
                 return viewModel.numberOfRowsInSection()
             }
             else {
                 return onlyFavMovies.count
             }
-        
     }
     
     
@@ -271,15 +267,8 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
         }
         
     }
+
     
-//    private func confUIForDetails(vc: MovieDetailsViewController, model: Movie) {
-//        vc.configureElements(model: model)
-//
-//
-////        let removedSelectedMovie = movies.filter { $0 != model }
-//        vc.moviesWithSameGenres = movies.filter { $0.genre == model.genre }
-//
-//    }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
@@ -309,13 +298,14 @@ extension MainPageViewController: UITableViewDelegate, UITableViewDataSource {
 
 extension MainPageViewController: MovieDetailsViewControllerDelegate {
     func changeIsFavProperty(isFav: Bool, id: Int) {
-        for index in 0 ..< viewModel.moviesData.count {
+        for index in 0 ..< viewModel.moviesData.count {      // I'm using this kind of for cycle, becouse moviesData is array of struct (value type)
             if viewModel.moviesData[index].id == id {
                 viewModel.moviesData[index].isFavourite = isFav
             }
         }
     }
 }
+
 
 
 
